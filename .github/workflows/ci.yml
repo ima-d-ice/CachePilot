@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: make
+
+      - name: Unit tests (28 groups)
+        run: make test
+
+      - name: Python compile check
+        run: python3 -m py_compile benchmark.py tools/bench_redis.py
+
+      - name: Sanitizers (ASan + UBSan, blocking)
+        run: make sanitize
+
+      - name: clang-tidy (blocking)
+        run: |
+          sudo apt-get update && sudo apt-get install -y clang-tidy
+          make tidy
+
+      - name: Docker reproducible build
+        run: docker build -t polycache .

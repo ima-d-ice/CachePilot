@@ -5,6 +5,7 @@ OBJS     := $(SRCS:.cpp=.o)
 DEPS     := $(OBJS:.o=.d)
 TARGET   := polycache
 TESTS    := test_sieve test_protocol test_storage test_resp
+SAN_FLAGS := -fsanitize=address,undefined -fno-omit-frame-pointer -g
 
 all: $(TARGET)
 
@@ -32,6 +33,13 @@ test_resp: tests/test_resp.cpp
 clean:
 	rm -f $(OBJS) $(DEPS) $(TARGET) $(TESTS)
 
+sanitize: clean
+	$(MAKE) CXXFLAGS="$(CXXFLAGS) $(SAN_FLAGS)" $(TARGET) $(TESTS)
+	@for t in $(TESTS); do echo "== $$t (san) =="; ./$$t; done
+
+tidy:
+	clang-tidy $(SRCS) -- -std=c++17 -I src
+
 -include $(DEPS)
 
-.PHONY: all clean test
+.PHONY: all clean test sanitize tidy
