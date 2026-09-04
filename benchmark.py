@@ -447,7 +447,7 @@ def run_mode(name, workload, preload_keys, cfg):
 
 
 # --------------------------------------------------------------------------
-# Output: summary table + plots
+# Output: summary table
 # --------------------------------------------------------------------------
 
 def print_summary(results, cfg) -> None:
@@ -483,34 +483,6 @@ def print_summary(results, cfg) -> None:
                      for pol in ("lru", "lfu", "sieve")]
             print("Phase %d (%s) complete. LRU: %.4f, LFU: %.4f, "
                   "SIEVE: %.4f" % (ph, label, rates[0], rates[1], rates[2]))
-
-
-def plot_hit_rates(results, cfg) -> None:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots(figsize=(9, 6))
-    for name, samples, _stats in results:
-        xs = [s["requests"] for s in samples]
-        ys = [s["overall_hit_rate"] for s in samples]
-        ax.plot(xs, ys, marker="o", markersize=3, label=name)
-    p1 = cfg.requests // 3
-    p2 = 2 * (cfg.requests // 3)
-    for x, label in ((p1, "zipf skew"), (p2, "hot+scan"), (cfg.requests, "mixed")):
-        ax.axvline(x, color="gray", linestyle="--", lw=0.8)
-        ax.text(x, 0.02, label, rotation=90, fontsize=8, color="gray")
-    ax.set_xlabel("requests issued")
-    ax.set_ylabel("hit rate (overall)")
-    ax.set_ylim(0.0, 1.05)
-    ax.set_title("PolyCache hit rate vs requests "
-                 "(fresh %dMB server per mode)" % cfg.cache_size_mb)
-    ax.legend()
-    fig.tight_layout()
-    out = "%shit_rate_vs_requests.png" % cfg.plot_prefix
-    fig.savefig(out)
-    plt.close(fig)
-    print("saved %s" % out)
 
 
 # --------------------------------------------------------------------------
@@ -605,29 +577,17 @@ def main(argv=None) -> int:
                         help="burst pool read at each phase start, then "
                              "idle; past the LRU horizon LRU drops these "
                              "keys, LFU/SIEVE keep them")
-    parser.add_argument("--cold-ratio", type=float, default=None,
+    parser.add_argument("--cold-ratio", type=float, default=0.50,
                         help="share of phase-1 (and the phase-3 first-half) "
                              "requests that SET a brand-new key never read "
                              "again.  Each SET evicts one key, so this is the "
                              "churn that must blow the eviction frontier past "
                              "the burst pool within a phase (>= capacity / "
-                             "phase length keeps it honest).  Default 0.50 "
-                             "(0.30 with --churn-regime moderate)")
-    parser.add_argument("--scan-write-ratio", type=float, default=None,
+                             "phase length keeps it honest).")
+    parser.add_argument("--scan-write-ratio", type=float, default=0.50,
                         help="analogous churn for phase 2 / phase-3 second "
                              "half; the remaining requests split 50/50 between "
-                             "hot zipfian GETs and the resident scan.  "
-                             "Default 0.50 (0.30 with --churn-regime moderate)")
-    parser.add_argument("--churn-regime", default="adversarial",
-                        choices=("adversarial", "moderate"),
-                        help="adversarial = 0.50/0.50 cold+scan churn (the "
-                             "verified-divergence config that saturates the "
-                             "rule classifier's confidence); moderate = "
-                             "0.30/0.30 churn just above the divergence "
-                             "floor, where the rule's signals stay near "
-                             "their decision boundaries and genuine "
-                             "rule-vs-physics ambiguity can occur.  Explicit "
-                             "--cold-ratio/--scan-write-ratio override it.")
+                             "hot zipfian GETs and the resident scan.")
     parser.add_argument("--block-size", type=int, default=1000)
     parser.add_argument("--cache-host", default="localhost")
     parser.add_argument("--cache-port", type=int, default=6379)
@@ -642,7 +602,6 @@ def main(argv=None) -> int:
     parser.add_argument("--server-path", default=str(SCRIPT_DIR / "polycache"))
     parser.add_argument("--aof-prefix", default="/tmp/polycache_bench")
     parser.add_argument("--wait-timeout", type=float, default=10.0)
-    parser.add_argument("--plot-prefix", default="")
     args = parser.parse_args(argv)
 
     if args.cache_size_mb < 1:
@@ -655,14 +614,6 @@ def main(argv=None) -> int:
     if args.alpha <= 0:
         print("--alpha must be > 0", file=sys.stderr)
         return 1
-    # Churn regime defaults: adversarial = verified-divergence 0.50/0.50;
-    # moderate = gentler churn where the rule's signals stay near their
-    # thresholds (the regime where rule-vs-physics conflict can occur).
-    if args.cold_ratio is None:
-        args.cold_ratio = 0.50 if args.churn_regime == "adversarial" else 0.30
-    if args.scan_write_ratio is None:
-        args.scan_write_ratio = (0.50 if args.churn_regime == "adversarial"
-                                 else 0.30)
     if not (0.0 <= args.cold_ratio < 1.0 and
             0.0 <= args.scan_write_ratio < 1.0):
         print("--cold-ratio/--scan-write-ratio must be in [0, 1)",
@@ -711,8 +662,6 @@ def main(argv=None) -> int:
         results = run_seed(args, seed, namespace_artifacts=(len(seeds) > 1))
         per_seed[seed] = results
         print_summary(results, args)
-        if len(seeds) == 1:
-            plot_hit_rates(results, args)
 
     if len(seeds) > 1:
         print_aggregate(per_seed, args)

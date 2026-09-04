@@ -4,7 +4,6 @@ polycache
 test_sieve
 test_protocol
 test_storage
-test_resp
 *.aof
 *.log
 venv/

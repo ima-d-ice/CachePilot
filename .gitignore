@@ -5,7 +5,6 @@ polycache
 test_sieve
 test_protocol
 test_storage
-test_resp
 .DS_Store
 __pycache__/
 *.pyc
