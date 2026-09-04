@@ -86,12 +86,14 @@ def resp_command(port: int, *parts: str, timeout: float = 2.0) -> str:
         return s.recv(256).decode(errors="replace").strip()
 
 
-def start_redis(port: int, mem_mb: int, policy: str):
+def start_redis(port: int, mem_mb: int, policy: str, io_threads: int = None):
     redis_server = find_binary("redis-server")
+    cmd = [redis_server, "--port", str(port), "--maxmemory", "%dmb" % mem_mb,
+           "--maxmemory-policy", policy, "--save", "", "--appendonly", "no"]
+    if io_threads is not None:
+        cmd += ["--io-threads", str(io_threads)]
     proc = subprocess.Popen(
-        [redis_server, "--port", str(port), "--maxmemory", "%dmb" % mem_mb,
-         "--maxmemory-policy", policy, "--save", "", "--appendonly", "no"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if not wait_for_tcp(port):
         sys.exit("redis-server failed to come up on port %d" % port)
     return proc
@@ -170,7 +172,8 @@ def run_scenario(policy: str, redis_policy: str, args) -> dict:
         # far slower -- that is the honest tradeoff to show.
         procs.append(start_polycache(pc_port, pc_admin, args.mem_limit_mb,
                                      policy, aof, no_aof=not args.with_aof))
-        procs.append(start_redis(r_port, args.mem_limit_mb, redis_policy))
+        procs.append(start_redis(r_port, args.mem_limit_mb, redis_policy,
+                                 args.io_threads))
 
         pc_rps, r_rps = {}, {}
         for cmd in COMMANDS:
@@ -236,6 +239,9 @@ def main() -> int:
     ap.add_argument("--with-aof", action="store_true",
                     help="keep PolyCache AOF ON (synchronous per-write "
                          "fsync); default is --no-aof for fair throughput")
+    ap.add_argument("--io-threads", type=int, default=None,
+                    help="Redis I/O threads count (default: single-threaded compatible; "
+                         "e.g. 2, 4)")
     args = ap.parse_args()
 
     rows = []
