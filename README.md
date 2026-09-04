@@ -1,6 +1,5 @@
 # PolyCache
-[![ci](https://github.com/ima-d-ice/polycache/actions/workflows/ci.yml/badge.svg)](https://github.com/ima-d-ice/polycache/actions/workflows/ci.yml)
-**C++17** • **Epoll** • **SIEVE / LRU / LFU** • **AOF Persistence** • **CI + ASan/UBSan + clang-tidy**
+**C++17** • **Epoll** • **SIEVE / LRU / LFU** • **AOF Persistence** • **Dockerised**
 
 A high-performance in-memory cache server written in C++17 with hot-swappable eviction policies and a rigorous statistical benchmarking harness.
 
@@ -12,10 +11,7 @@ A high-performance in-memory cache server written in C++17 with hot-swappable ev
 | **Eviction Policies** | Hand-rolled SIEVE (NSDI 2024), LRU, LFU (behind a unified `EvictionPolicy` interface) |
 | **Persistence** | Synchronous AOF (Append-Only File) with JSON-line formatting and crash replay |
 | **Dependencies** | `nlohmann/json` (vendored single header) |
-| **Testing** | Plain C++17 assertions (`CHECK` macros), 28 groups (6 sieve + 12 protocol + 4 storage + 6 resp), zero external test frameworks |
-| **CI** | GitHub Actions on `ubuntu-latest`: `make`, `make test`, `py_compile`, `make sanitize`, `make tidy`, `docker build` (all blocking) |
-| **Reproducible Build** | Slim `gcc:13-bookworm` image (`Makefile` + `src/` + `tests/` only) |
-| **Static/Runtime Checks** | `clang-tidy` (`WarningsAsErrors`) + AddressSanitizer/UndefinedBehaviorSanitizer via `make sanitize` |
+| **Testing** | Plain C++17 assertions (`CHECK` macros), zero external test frameworks |
 
 ## Core Features
 
@@ -27,16 +23,12 @@ A high-performance in-memory cache server written in C++17 with hot-swappable ev
 ## Quick Start
 
 ```bash
-# Build the server and run unit tests (28 groups, all must print "ok ...")
+# Build the server and run unit tests
 make
 make test
 
-# Runtime checks: sanitizers + static analysis (both blocking in CI)
-make sanitize
-make tidy
-
-# Python harness syntax check
-python3 -m py_compile benchmark.py tools/bench_redis.py
+# Or build the Docker image (gcc:13-bookworm, runs make && make test)
+docker build -t polycache .
 
 # Start the server (Defaults: port 6379, admin 8080, 64MB limit)
 ./polycache --memory-limit 64 --aof-file polycache.aof
@@ -127,39 +119,11 @@ SIEVE and LFU tie and consistently outperform LRU in scan-heavy phases.
 | **static_lfu** | **0.3041 ± 0.0502** | 0.2890 | 0.2293 | **0.3868** |
 | static_lru | 0.1630 ± 0.0508 | 0.2885 | 0.0846 | 0.1200 |
 
-## Correctness & CI
-
-### Unit Tests (28 groups, `make test`)
-Plain C++17 asserts, zero framework. `main.cpp` never links into tests.
-
-| Binary | Groups | What it covers |
-| :--- | :--- | :--- |
-| `test_sieve` | 6 | visited-bit behavior, hand pointer, eviction order, memory accounting |
-| `test_protocol` | 12 | RESP framing, DoS guards (arg cap, length cap), binary values, pipelined frames, unknown verbs |
-| `test_storage` | 4 | set/get/del, TTL, eviction under limit, policy switch |
-| `test_resp` | 6 | RESP arrays, binary values, pipelined frames, partial frames, oversized args |
-
-### GitHub Actions (`.github/workflows/ci.yml`, `ubuntu-latest`, all blocking)
-Build → unit tests → Python compile check → `make sanitize` → `make tidy` → `docker build -t polycache .`. Runs on push to `master` and all pull requests.
-
-### Docker Reproducible Build (C++ only)
-Slim `gcc:13-bookworm` image with `Makefile` + `src/` + `tests/` only — no `benchmark.py`/`tools/`, no Python/Redis inside (those are checked natively in CI).
-
-```bash
-docker build -t polycache .
-docker run --rm polycache ./test_sieve   # + test_protocol, test_storage, test_resp
-```
-
-### Sanitizers & clang-tidy
-`SAN_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer -g` (`Makefile`); `make sanitize` does a clean rebuild so sanitizer `.o` files never mix with normal builds. `.clang-tidy` enables `bugprone/clang-analyzer/performance/readability` with `WarningsAsErrors: true` and `HeaderFilter: src/.*` (vendored `json.hpp` excluded).
-
 ## Project Structure
 
 * `/src`: C++17 server core (network I/O, storage engine, eviction policies, AOF persistence, RESP parser).
 * `/tests`: Plain C++17 unit tests for protocol parsing, RESP framing, storage mechanics, and SIEVE semantics.
 * `benchmark.py`: Python 3 statistical benchmarking harness with multi-seed aggregation.
 * `tools/bench_redis.py`: RESP head-to-head harness driving `redis-benchmark` against PolyCache and Redis.
-* `Makefile`: Build system for the server and test binaries (`all`, `test`, `sanitize`, `tidy`, `clean`).
-* `Dockerfile` + `.dockerignore`: slim reproducible C++ build image.
-* `.github/workflows/ci.yml`: minimal Linux CI (build, test, sanitizers, tidy, Docker).
-* `.clang-tidy`: blocking static-analysis config.
+* `Makefile`: Build system for the server and test binaries.
+* `Dockerfile`: Slim reproducible C++ build image.
