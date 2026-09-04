@@ -1,5 +1,19 @@
 ---
-Checks: 'bugprone-*,clang-analyzer-*,performance-*,readability-*,-readability-magic-numbers,-readability-identifier-length'
+# Blocking static analysis (CI runs `make tidy`). High-value bugprone /
+# analyzer / performance checks stay on. Disabled checks are documented
+# below — each fires on idiomatic systems code in this repo:
+#   signed-bitwise ......... epoll/poll flag arithmetic (EPOLLIN|EPOLLOUT);
+#                            the kernel APIs themselves use int flags.
+#   easily-swappable ....... epoll_ctl/epoll_wait mirror POSIX signatures
+#                            that cannot change; log_set(key, value) is the
+#                            conventional order.
+#   implicit-bool .......... poll revents bit-tests (revents & POLLIN).
+#   trailing-comma ......... pure style.
+#   cognitive-complexity ... single dispatch loops (Server/Admin start()).
+#   member-function-const .. const-churn on epoll handlers, no safety value.
+#   magic-numbers .......... protocol constants; identifier-length: short
+#                            fd/ev names are conventional.
+Checks: 'bugprone-*,clang-analyzer-*,performance-*,readability-*,-readability-magic-numbers,-readability-identifier-length,-bugprone-signed-bitwise,-bugprone-easily-swappable-parameters,-readability-implicit-bool-conversion,-readability-trailing-comma,-readability-function-cognitive-complexity,-readability-make-member-function-const,-readability-convert-member-functions-to-static'
 WarningsAsErrors: true
 HeaderFilterRegex: 'src/.*'
 CheckOptions:

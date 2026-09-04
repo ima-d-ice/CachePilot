@@ -53,7 +53,7 @@ void AOFLogger::replay(Storage* storage) {
             } else if (cmd == "DEL") {
                 storage->del(j.value("key", ""));
             }
-        } catch (const nlohmann::json::parse_error&) {
+        } catch (const nlohmann::json::parse_error&) {  // NOLINT(bugprone-empty-catch): torn tail line is skipped so the rest of the log still replays
         }
     }
     file_.open(filename_, ios::out | ios::app);

@@ -111,11 +111,12 @@ bool Storage::switch_policy(const string& name) {
     } else if (lower == "lfu") {
         // Lowest frequency first, recency tiebreak => buckets come out ordered.
         sort(ordered.begin(), ordered.end(),
-             [](const auto& a, const auto& b) {
-                 if (a.second->freq != b.second->freq)
-                     return a.second->freq < b.second->freq;
-                 return a.second->last_access_seq < b.second->last_access_seq;
-             });
+              [](const auto& a, const auto& b) {
+                  if (a.second->freq != b.second->freq) {
+                      return a.second->freq < b.second->freq;
+                  }
+                  return a.second->last_access_seq < b.second->last_access_seq;
+              });
         for (auto& [key, meta] : ordered) {
             next->add(*key, meta->size);
         }
@@ -162,8 +163,8 @@ nlohmann::json Storage::metrics() const {
     j["misses"] = static_cast<int>(misses_);
     j["evictions"] = static_cast<int>(evictions_);
     const auto total = static_cast<float>(hits_ + misses_);
-    j["hit_rate"] = total > 0.0f ? static_cast<float>(hits_) / total : 0.0f;
-    j["miss_rate"] = total > 0.0f ? static_cast<float>(misses_) / total : 0.0f;
+    j["hit_rate"] = total > 0.0F ? static_cast<float>(hits_) / total : 0.0F;
+    j["miss_rate"] = total > 0.0F ? static_cast<float>(misses_) / total : 0.0F;
     return j;
 }
 

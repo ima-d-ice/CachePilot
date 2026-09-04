@@ -14,7 +14,7 @@ jobs:
       - name: Build
         run: make
 
-      - name: Unit tests (28 groups)
+      - name: Unit tests (22 groups)
         run: make test
 
       - name: Python compile check

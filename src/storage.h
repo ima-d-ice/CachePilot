@@ -24,7 +24,7 @@ struct KeyMeta {
 
 class Storage {
 public:
-    explicit Storage(std::size_t memory_limit = 64 * 1024 * 1024);
+    explicit Storage(std::size_t memory_limit = std::size_t{64} * 1024 * 1024);
     ~Storage() = default;
 
     void set(const std::string& key, const std::string& value, int ttl_sec);

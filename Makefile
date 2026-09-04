@@ -35,7 +35,7 @@ sanitize: clean
 	@for t in $(TESTS); do echo "== $$t (san) =="; ./$$t; done
 
 tidy:
-	clang-tidy $(SRCS) -- -std=c++17 -I src
+	clang-tidy --warnings-as-errors='*' --header-filter='src/(eviction/)?[^/]+\.h$$' $(SRCS) -- -std=c++17 -I src
 
 -include $(DEPS)
 

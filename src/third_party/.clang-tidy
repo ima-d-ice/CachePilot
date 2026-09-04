@@ -1,0 +1,6 @@
+---
+# Vendored third-party code: never linted. The root config's HeaderFilter
+# already excludes it, but a nearest-config with all checks off is the
+# robust guard (clang-tidy resolves config per-file).
+Checks: '-*'
+...

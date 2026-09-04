@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(__linux__)
+#ifdef __linux__
 
 #include <sys/epoll.h>
 
@@ -63,7 +63,7 @@ inline std::mutex& instances_mutex() {
 
 }  // namespace epoll_compat
 
-inline int epoll_create1(int) {
+inline int epoll_create1(int /*flags*/) {
     static std::atomic<int> next_fd{1024};
     const int fd = next_fd.fetch_add(1) + 1;
     std::lock_guard<std::mutex> lk(epoll_compat::instances_mutex());

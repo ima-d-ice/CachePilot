@@ -23,7 +23,7 @@ string http_response(int status, const string& status_text,
                      const string& body) {
     string resp = "HTTP/1.1 ";
     resp += to_string(status);
-    resp += " ";
+    resp += ' ';
     resp += status_text;
     resp += "\r\n";
     resp += "Content-Type: application/json\r\n";

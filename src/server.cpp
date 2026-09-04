@@ -135,10 +135,9 @@ void Server::start() {
             if ((event_flags & EPOLLOUT) != 0) {
                 try_send(fd);
             }
-            if ((event_flags & (EPOLLERR | EPOLLHUP)) != 0) {
-                if (buffers_.find(fd) != buffers_.end()) {
-                    close_client(fd);
-                }
+            if ((event_flags & (EPOLLERR | EPOLLHUP)) != 0 &&
+                buffers_.find(fd) != buffers_.end()) {
+                close_client(fd);
             }
         }
     }
@@ -352,8 +351,7 @@ string Server::execute_command(const protocol::Command& cmd) {
             if (!saw_ex_px && cmd.args.size() >= 3) {
                 try {
                     ttl = stoi(cmd.args[2]);
-                } catch (...) {
-                    // non-numeric -> ignore, ttl stays 0
+                } catch (...) {  // NOLINT(bugprone-empty-catch): non-numeric -> ignore, ttl stays 0
                 }
             }
             storage_->set(cmd.args[0], cmd.args[1], ttl);

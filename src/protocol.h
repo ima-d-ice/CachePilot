@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -7,7 +8,7 @@
 namespace protocol {
 
 struct Command {
-    enum Type { SET, GET, DEL, METRICS, SWITCH_POLICY, PING, SELECT, UNKNOWN };
+    enum Type : std::uint8_t { SET, GET, DEL, METRICS, SWITCH_POLICY, PING, SELECT, UNKNOWN };
     Type type = UNKNOWN;
     std::vector<std::string> args;
 };

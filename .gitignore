@@ -1,6 +1,7 @@
 *.o
 *.d
 *.aof
+*.log
 polycache
 test_sieve
 test_protocol

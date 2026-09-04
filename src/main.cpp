@@ -17,7 +17,7 @@ namespace {
 Server* g_server = nullptr;
 AdminServer* g_admin = nullptr;
 
-void handle_signal(int) {
+void handle_signal(int /*sig*/) {
     if (g_server != nullptr) {
         g_server->stop();
     }
@@ -34,7 +34,7 @@ void print_usage(const char* prog) {
 
 }  // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) {  // NOLINT(bugprone-exception-escape): outermost frame; std::exceptions are caught below, anything else terminating here is the defined behavior
     int port = 6379;
     int admin_port = 8080;
     size_t memory_mb = 64;
@@ -69,12 +69,15 @@ int main(int argc, char** argv) {
                 print_usage(argv[0]);
                 return 1;
             }
-        } catch (const invalid_argument&) {
+        } catch (const exception&) {
             cerr << "invalid numeric value for " << arg << "\n";
             return 1;
         }
     }
 
+    // Startup can throw (TTL/admin thread creation, allocations): report
+    // cleanly instead of escaping main with an uncaught exception.
+    try {
     Storage storage(memory_mb * 1024 * 1024);
     std::unique_ptr<AOFLogger> aof;
     if (use_aof) {
@@ -92,16 +95,20 @@ int main(int argc, char** argv) {
     sigaction(SIGTERM, &sa, nullptr);
 
     g_admin = &admin;
-    thread admin_thread([&admin] { admin.start(); });
+        thread admin_thread([&admin] { admin.start(); });
 
-    g_server = &server;
-    cout << "PolyCache listening on port " << port << ", admin on port "
-         << admin_port << ", policies: lru, lfu, sieve" << endl;
-    server.start();
-    g_server = nullptr;
+        g_server = &server;
+        cout << "PolyCache listening on port " << port << ", admin on port "
+             << admin_port << ", policies: lru, lfu, sieve" << '\n';
+        server.start();
+        g_server = nullptr;
 
-    admin.stop();
-    admin_thread.join();
+        admin.stop();
+        admin_thread.join();
+    } catch (const exception& e) {
+        cerr << "fatal: " << e.what() << "\n";
+        return 1;
+    }
     g_admin = nullptr;
 
     return 0;

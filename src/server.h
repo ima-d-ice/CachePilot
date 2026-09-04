@@ -22,7 +22,7 @@ public:
     void stop();
 
 private:
-    static constexpr std::size_t kMaxBufferSize = 64 * 1024;
+    static constexpr std::size_t kMaxBufferSize = std::size_t{64} * 1024;
 
     void accept_connections();
     void handle_readable(int fd);
