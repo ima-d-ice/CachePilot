@@ -23,15 +23,9 @@ A high-performance in-memory cache server written in C++17 with hot-swappable ev
 ## Quick Start
 
 ```bash
-# Build the server and run unit tests
-make
-make test
-
-# Or build the Docker image (gcc:13-bookworm, runs make && make test)
+# Build the image and run the server (ports 6379 TCP, 8080 admin)
 docker build -t polycache .
-
-# Start the server (Defaults: port 6379, admin 8080, 64MB limit)
-./polycache --memory-limit 64 --aof-file polycache.aof
+docker run --rm -p 6379:6379 -p 8080:8080 polycache
 ```
 
 *Note: Graceful shutdown is triggered by `SIGINT` or `SIGTERM`.*
